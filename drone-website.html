@@ -1,0 +1,2234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroBrain — Autonomous Drone with Obstacle Avoidance</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Syncopate:wght@400;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #04080f;
+  --surface: #080f1c;
+  --card: #0b1525;
+  --border: #112240;
+  --accent: #00b4ff;
+  --accent2: #ff6b00;
+  --accent3: #00ff9d;
+  --danger: #ff3c5a;
+  --text: #cde4f8;
+  --muted: #3a6080;
+  --glow-blue: 0 0 24px rgba(0,180,255,0.35);
+  --glow-orange: 0 0 24px rgba(255,107,0,0.35);
+  --glow-green: 0 0 20px rgba(0,255,157,0.3);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Scan lines */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ===== NAV ===== */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5%;
+  height: 64px;
+  background: rgba(4,8,15,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: var(--glow-blue);
+  letter-spacing: 3px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-logo-icon {
+  width: 30px; height: 30px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+}
+
+.nav-links a {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 0.2s;
+  position: relative;
+}
+
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; left: 0; right: 0;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transition: transform 0.2s;
+}
+
+.nav-links a:hover { color: var(--accent); }
+.nav-links a:hover::after { transform: scaleX(1); }
+
+/* ===== HERO ===== */
+#home {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  padding: 80px 5% 60px;
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 60% 40%, rgba(0,100,200,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 20% 70%, rgba(255,107,0,0.06) 0%, transparent 50%);
+}
+
+.grid-lines {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,180,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,180,255,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.hero-content {
+  position: relative;
+  max-width: 700px;
+  z-index: 2;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  border: 1px solid rgba(0,180,255,0.3);
+  padding: 6px 16px;
+  border-radius: 2px;
+  margin-bottom: 28px;
+  background: rgba(0,180,255,0.06);
+  animation: fadeUp 0.6s ease both;
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.hero-title {
+  font-family: 'Syncopate', sans-serif;
+  font-size: clamp(28px, 5vw, 56px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 2px;
+  color: #fff;
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+
+.hero-title span {
+  color: var(--accent);
+  text-shadow: var(--glow-blue);
+}
+
+.hero-sub {
+  font-size: 18px;
+  color: var(--muted);
+  margin: 24px 0 40px;
+  max-width: 520px;
+  animation: fadeUp 0.6s 0.2s ease both;
+}
+
+.hero-ctas {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  animation: fadeUp 0.6s 0.3s ease both;
+}
+
+.btn-primary {
+  padding: 14px 32px;
+  background: var(--accent);
+  color: #000;
+  font-family: 'Syncopate', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+.btn-primary:hover {
+  background: #fff;
+  box-shadow: var(--glow-blue);
+}
+
+.btn-outline {
+  padding: 14px 32px;
+  background: transparent;
+  color: var(--accent);
+  font-family: 'Syncopate', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  border: 1px solid var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
+}
+
+.btn-outline:hover {
+  background: rgba(0,180,255,0.1);
+  box-shadow: var(--glow-blue);
+}
+
+/* Hero drone visual */
+.hero-drone {
+  position: absolute;
+  right: 5%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 420px;
+  height: 420px;
+  z-index: 2;
+  animation: droneFloat 5s ease-in-out infinite;
+}
+
+@keyframes droneFloat {
+  0%,100%{transform:translateY(-50%) rotate(0deg)}
+  25%{transform:translateY(calc(-50% - 20px)) rotate(1.5deg)}
+  75%{transform:translateY(calc(-50% + 10px)) rotate(-1deg)}
+}
+
+@keyframes fadeUp {
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Hero stats */
+.hero-stats {
+  position: absolute;
+  bottom: 40px;
+  left: 5%;
+  right: 5%;
+  display: flex;
+  gap: 48px;
+  animation: fadeUp 0.6s 0.5s ease both;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-num {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: var(--glow-blue);
+}
+
+.stat-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* ===== SECTIONS ===== */
+section {
+  padding: 100px 5%;
+}
+
+.section-header {
+  margin-bottom: 60px;
+}
+
+.section-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-tag::before {
+  content: '';
+  width: 30px; height: 1px;
+  background: var(--accent);
+}
+
+.section-title {
+  font-family: 'Syncopate', sans-serif;
+  font-size: clamp(22px, 3.5vw, 38px);
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 2px;
+  line-height: 1.2;
+}
+
+.section-title span { color: var(--accent); }
+
+/* ===== OBJECTIVE ===== */
+#objective {
+  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+}
+
+#objective::before {
+  content: '';
+  position: absolute;
+  top: -100px; right: -100px;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,180,255,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.objectives-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.obj-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 32px 28px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+
+.obj-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.obj-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0,180,255,0.3);
+  box-shadow: var(--glow-blue);
+}
+
+.obj-card:hover::before { opacity: 1; }
+
+.obj-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.obj-icon {
+  font-size: 36px;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.obj-title {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.obj-desc {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ===== COMPONENTS ===== */
+#components { position: relative; }
+
+.components-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+.comp-list { display: flex; flex-direction: column; gap: 16px; }
+
+.comp-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 24px;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  transition: all 0.3s;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.comp-item::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  transform: scaleY(0);
+  transition: transform 0.3s;
+  transform-origin: bottom;
+}
+
+.comp-item:hover::after { transform: scaleY(1); }
+.comp-item:hover { border-color: rgba(0,180,255,0.3); box-shadow: var(--glow-blue); }
+
+.comp-icon-wrap {
+  width: 48px; height: 48px;
+  background: rgba(0,180,255,0.1);
+  border: 1px solid rgba(0,180,255,0.2);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.comp-info { flex: 1; }
+
+.comp-name {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.comp-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.comp-examples {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.comp-tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--accent);
+  background: rgba(0,180,255,0.08);
+  border: 1px solid rgba(0,180,255,0.2);
+  padding: 2px 10px;
+  border-radius: 2px;
+}
+
+/* Drone diagram */
+.drone-diagram {
+  position: sticky;
+  top: 100px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 40px 30px;
+  text-align: center;
+}
+
+.drone-diagram-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-bottom: 30px;
+}
+
+/* ===== HOW IT WORKS ===== */
+#working {
+  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.steps-timeline {
+  position: relative;
+  max-width: 800px;
+}
+
+.steps-timeline::before {
+  content: '';
+  position: absolute;
+  left: 28px; top: 0; bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, var(--accent), transparent);
+  opacity: 0.3;
+}
+
+.step {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 48px;
+  position: relative;
+  animation: fadeUp 0.5s ease both;
+}
+
+.step-num {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syncopate', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s;
+}
+
+.step:hover .step-num {
+  border-color: var(--accent);
+  box-shadow: var(--glow-blue);
+  background: rgba(0,180,255,0.1);
+}
+
+.step-body { padding-top: 12px; }
+
+.step-title {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.step-desc { font-size: 15px; color: var(--muted); }
+
+/* ===== ALGORITHMS ===== */
+.algo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.algo-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 32px 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+  text-align: center;
+}
+
+.algo-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(0,180,255,0.08), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.algo-card:hover { border-color: rgba(0,180,255,0.3); transform: translateY(-4px); }
+.algo-card:hover::before { opacity: 1; }
+
+.algo-icon { font-size: 40px; margin-bottom: 16px; display: block; }
+
+.algo-name {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.algo-full {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+
+.algo-desc { font-size: 13px; color: var(--muted); }
+
+/* ===== APPLICATIONS ===== */
+#applications { background: var(--surface); }
+
+.apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.app-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0;
+  overflow: hidden;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.app-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(0,180,255,0.4);
+  box-shadow: var(--glow-blue);
+}
+
+.app-card-header {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 52px;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-card-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent, rgba(11,21,37,0.7));
+}
+
+.app-card-body { padding: 24px; }
+
+.app-title {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.app-desc { font-size: 14px; color: var(--muted); }
+
+/* ===== ADVANTAGES & CHALLENGES ===== */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.adv-list, .chal-list { display: flex; flex-direction: column; gap: 16px; }
+
+.adv-item, .chal-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px;
+  transition: all 0.3s;
+}
+
+.adv-item:hover { border-color: rgba(0,255,157,0.3); box-shadow: var(--glow-green); }
+.chal-item:hover { border-color: rgba(255,107,0,0.3); box-shadow: var(--glow-orange); }
+
+.adv-bullet {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: rgba(0,255,157,0.1);
+  border: 1px solid rgba(0,255,157,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  color: var(--accent3);
+}
+
+.chal-bullet {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: rgba(255,107,0,0.1);
+  border: 1px solid rgba(255,107,0,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  color: var(--accent2);
+}
+
+.adv-text, .chal-text { font-size: 14px; color: var(--muted); }
+.adv-title, .chal-title {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 11px;
+  color: #fff;
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+}
+
+/* ===== LIVE DASHBOARD SECTION ===== */
+#dashboard {
+  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr 240px;
+  gap: 16px;
+}
+
+.dash-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px;
+  position: relative;
+}
+
+.dash-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.5;
+}
+
+.dash-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(17,34,64,0.5);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+}
+
+.metric-name { color: var(--muted); }
+.metric-val { color: var(--accent); font-weight: 500; }
+.metric-val.green { color: var(--accent3); }
+.metric-val.orange { color: var(--accent2); }
+.metric-val.red { color: var(--danger); }
+
+.mini-map {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin: 16px 0;
+  background: #000;
+  position: relative;
+  overflow: hidden;
+}
+
+.ctrl-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ctrl-btn {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: rgba(0,0,0,0.3);
+  color: var(--muted);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.ctrl-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0,180,255,0.08);
+}
+
+.ctrl-btn.active {
+  background: rgba(0,180,255,0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: var(--glow-blue);
+}
+
+.ctrl-btn.danger {
+  grid-column: 1 / -1;
+  border-color: rgba(255,60,90,0.4);
+  color: var(--danger);
+}
+
+.ctrl-btn.danger:hover { background: rgba(255,60,90,0.1); border-color: var(--danger); }
+
+.cam-feed {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.cam-feed canvas { width: 100%; height: 100%; display: block; }
+
+.feed-corners { position: absolute; inset: 0; pointer-events: none; }
+
+.fc { position: absolute; width: 20px; height: 20px; border-color: var(--accent); border-style: solid; opacity: 0.7; }
+.fc.tl { top: 10px; left: 10px; border-width: 2px 0 0 2px; }
+.fc.tr { top: 10px; right: 10px; border-width: 2px 2px 0 0; }
+.fc.bl { bottom: 10px; left: 10px; border-width: 0 0 2px 2px; }
+.fc.br { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
+
+.cam-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.cam-stat {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 10px;
+  text-align: center;
+}
+
+.cam-stat-val {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  text-shadow: var(--glow-blue);
+  display: block;
+}
+
+.cam-stat-lbl {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  margin-top: 4px;
+  display: block;
+}
+
+.sensor-bars { display: flex; flex-direction: column; gap: 12px; }
+
+.sb-item { }
+.sb-head {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.sb-head span:last-child { color: var(--accent); }
+
+.sb-track {
+  height: 5px;
+  background: rgba(0,180,255,0.08);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.sb-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent3));
+  transition: width 1.2s ease;
+  box-shadow: 0 0 8px rgba(0,180,255,0.4);
+}
+
+/* ===== TEAM ===== */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+}
+
+.team-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 32px 24px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.team-card:hover {
+  border-color: rgba(0,180,255,0.3);
+  box-shadow: var(--glow-blue);
+  transform: translateY(-4px);
+}
+
+.team-avatar {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: rgba(0,180,255,0.1);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin: 0 auto 20px;
+  transition: all 0.3s;
+}
+
+.team-card:hover .team-avatar {
+  border-color: var(--accent);
+  box-shadow: var(--glow-blue);
+}
+
+.team-name {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.team-role {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+
+/* ===== TECH STACK ===== */
+.tech-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 40px;
+}
+
+.tech-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px 16px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.tech-item:hover {
+  border-color: rgba(0,180,255,0.3);
+  box-shadow: var(--glow-blue);
+}
+
+.tech-icon { font-size: 32px; margin-bottom: 10px; display: block; }
+
+.tech-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+
+/* ===== FOOTER ===== */
+footer {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 60px 5% 40px;
+}
+
+.footer-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 60px;
+  margin-bottom: 40px;
+}
+
+.footer-brand .logo-text {
+  font-family: 'Syncopate', sans-serif;
+  font-size: 18px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 3px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.footer-brand p {
+  font-size: 14px;
+  color: var(--muted);
+  max-width: 260px;
+  line-height: 1.6;
+}
+
+.footer-links-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.footer-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.footer-links a {
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--accent); }
+
+.footer-bottom {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .hero-drone { display: none; }
+  .components-layout { grid-template-columns: 1fr; }
+  .two-col { grid-template-columns: 1fr; }
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .footer-top { grid-template-columns: 1fr; gap: 32px; }
+  nav .nav-links { display: none; }
+  .hero-stats { flex-wrap: wrap; gap: 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <svg class="nav-logo-icon" viewBox="0 0 30 30" fill="none">
+      <circle cx="15" cy="15" r="5" fill="#00b4ff" opacity="0.9"/>
+      <line x1="0" y1="15" x2="8" y2="15" stroke="#00b4ff" stroke-width="2" stroke-linecap="round"/>
+      <line x1="22" y1="15" x2="30" y2="15" stroke="#00b4ff" stroke-width="2" stroke-linecap="round"/>
+      <line x1="15" y1="0" x2="15" y2="8" stroke="#00b4ff" stroke-width="2" stroke-linecap="round"/>
+      <line x1="15" y1="22" x2="15" y2="30" stroke="#00b4ff" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="3" cy="3" r="3" fill="#00b4ff" opacity="0.5"/>
+      <circle cx="27" cy="3" r="3" fill="#00b4ff" opacity="0.5"/>
+      <circle cx="3" cy="27" r="3" fill="#00b4ff" opacity="0.5"/>
+      <circle cx="27" cy="27" r="3" fill="#00b4ff" opacity="0.5"/>
+    </svg>
+    AEROBRAIN
+  </div>
+  <ul class="nav-links">
+    <li><a href="#home">Home</a></li>
+    <li><a href="#objective">Objective</a></li>
+    <li><a href="#components">Components</a></li>
+    <li><a href="#working">How It Works</a></li>
+    <li><a href="#applications">Applications</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section id="home">
+  <div class="hero-bg"></div>
+  <div class="grid-lines"></div>
+
+  <div class="hero-content">
+    <div class="hero-badge">UAV-2024 // FINAL YEAR PROJECT</div>
+    <h1 class="hero-title">AUTONOMOUS<br>DRONE WITH<br><span>OBSTACLE AVOIDANCE</span></h1>
+    <p class="hero-sub">A self-navigating unmanned aerial vehicle equipped with real-time obstacle detection, GPS waypoint navigation, LiDAR sensing, and AI-powered path planning algorithms.</p>
+    <div class="hero-ctas">
+      <a href="#dashboard" class="btn-primary">VIEW DASHBOARD</a>
+      <a href="#components" class="btn-outline">EXPLORE SYSTEM</a>
+    </div>
+  </div>
+
+  <!-- SVG Drone -->
+  <svg class="hero-drone" viewBox="0 0 400 400" fill="none">
+    <!-- Glow rings -->
+    <circle cx="200" cy="200" r="180" stroke="rgba(0,180,255,0.05)" stroke-width="1"/>
+    <circle cx="200" cy="200" r="150" stroke="rgba(0,180,255,0.08)" stroke-width="1"/>
+    <circle cx="200" cy="200" r="120" stroke="rgba(0,180,255,0.06)" stroke-width="1" stroke-dasharray="6 10"/>
+
+    <!-- Body -->
+    <rect x="155" y="175" width="90" height="50" rx="8" fill="#0b1525" stroke="#00b4ff" stroke-width="1.5"/>
+    <rect x="170" y="185" width="60" height="30" rx="4" fill="#030810" opacity="0.8"/>
+
+    <!-- Camera -->
+    <circle cx="200" cy="232" r="10" fill="#0b1525" stroke="#00b4ff" stroke-width="1.5"/>
+    <circle cx="200" cy="232" r="5" fill="#00b4ff" opacity="0.7"/>
+    <circle cx="200" cy="232" r="2" fill="#fff"/>
+
+    <!-- Arms -->
+    <line x1="155" y1="185" x2="90" y2="140" stroke="#00b4ff" stroke-width="2" stroke-linecap="round"/>
+    <line x1="245" y1="185" x2="310" y2="140" stroke="#00b4ff" stroke-width="2" stroke-linecap="round"/>
+    <line x1="155" y1="215" x2="90" y2="260" stroke="#00b4ff" stroke-width="2" stroke-linecap="round"/>
+    <line x1="245" y1="215" x2="310" y2="260" stroke="#00b4ff" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Motor hubs -->
+    <circle cx="90" cy="138" r="14" fill="#0b1525" stroke="#00b4ff" stroke-width="1.5"/>
+    <circle cx="310" cy="138" r="14" fill="#0b1525" stroke="#00b4ff" stroke-width="1.5"/>
+    <circle cx="90" cy="262" r="14" fill="#0b1525" stroke="#00b4ff" stroke-width="1.5"/>
+    <circle cx="310" cy="262" r="14" fill="#0b1525" stroke="#00b4ff" stroke-width="1.5"/>
+
+    <!-- Propellers animated -->
+    <ellipse cx="90" cy="138" rx="42" ry="6" fill="rgba(0,180,255,0.15)" stroke="rgba(0,180,255,0.4)" stroke-width="1">
+      <animateTransform attributeName="transform" type="rotate" from="0 90 138" to="360 90 138" dur="0.4s" repeatCount="indefinite"/>
+    </ellipse>
+    <ellipse cx="310" cy="138" rx="42" ry="6" fill="rgba(0,180,255,0.15)" stroke="rgba(0,180,255,0.4)" stroke-width="1">
+      <animateTransform attributeName="transform" type="rotate" from="360 310 138" to="0 310 138" dur="0.4s" repeatCount="indefinite"/>
+    </ellipse>
+    <ellipse cx="90" cy="262" rx="42" ry="6" fill="rgba(0,180,255,0.15)" stroke="rgba(0,180,255,0.4)" stroke-width="1">
+      <animateTransform attributeName="transform" type="rotate" from="360 90 262" to="0 90 262" dur="0.4s" repeatCount="indefinite"/>
+    </ellipse>
+    <ellipse cx="310" cy="262" rx="42" ry="6" fill="rgba(0,180,255,0.15)" stroke="rgba(0,180,255,0.4)" stroke-width="1">
+      <animateTransform attributeName="transform" type="rotate" from="0 310 262" to="360 310 262" dur="0.4s" repeatCount="indefinite"/>
+    </ellipse>
+
+    <!-- LED indicators -->
+    <circle cx="174" cy="192" r="3" fill="#00ff9d" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;0.2;0.9" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="226" cy="192" r="3" fill="#ff3c5a" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;0.2;0.9" dur="1.2s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- Altitude beam -->
+    <line x1="200" y1="200" x2="200" y2="380" stroke="rgba(0,180,255,0.1)" stroke-width="2" stroke-dasharray="4 8"/>
+    <ellipse cx="200" cy="380" rx="40" ry="8" fill="rgba(0,180,255,0.06)"/>
+
+    <!-- Scan ring -->
+    <circle cx="200" cy="200" r="85" stroke="rgba(0,255,157,0.1)" stroke-width="1" stroke-dasharray="3 7">
+      <animateTransform attributeName="transform" type="rotate" from="0 200 200" to="360 200 200" dur="12s" repeatCount="indefinite"/>
+    </circle>
+  </svg>
+
+  <div class="hero-stats">
+    <div class="stat"><span class="stat-num">360°</span><span class="stat-label">Obstacle Detection</span></div>
+    <div class="stat"><span class="stat-num">50m</span><span class="stat-label">LiDAR Range</span></div>
+    <div class="stat"><span class="stat-num">30fps</span><span class="stat-label">Vision Processing</span></div>
+    <div class="stat"><span class="stat-num">GPS</span><span class="stat-label">Waypoint Nav</span></div>
+  </div>
+</section>
+
+<!-- OBJECTIVE -->
+<section id="objective">
+  <div class="section-header">
+    <div class="section-tag">01 / Overview</div>
+    <h2 class="section-title">PROJECT <span>OBJECTIVES</span></h2>
+  </div>
+  <div class="objectives-grid">
+    <div class="obj-card">
+      <div class="obj-num">OBJ-001</div>
+      <span class="obj-icon">✈️</span>
+      <div class="obj-title">AUTONOMOUS FLIGHT</div>
+      <p class="obj-desc">Design a drone that operates fully without manual control, executing pre-defined flight paths and mission objectives independently.</p>
+    </div>
+    <div class="obj-card">
+      <div class="obj-num">OBJ-002</div>
+      <span class="obj-icon">👁️</span>
+      <div class="obj-title">REAL-TIME DETECTION</div>
+      <p class="obj-desc">Detect obstacles in real-time using LiDAR, ultrasonic sensors and computer vision to prevent mid-air collisions.</p>
+    </div>
+    <div class="obj-card">
+      <div class="obj-num">OBJ-003</div>
+      <span class="obj-icon">🔀</span>
+      <div class="obj-title">AUTO AVOIDANCE</div>
+      <p class="obj-desc">Automatically re-route around detected obstacles using intelligent path planning and PID-controlled maneuvering.</p>
+    </div>
+    <div class="obj-card">
+      <div class="obj-num">OBJ-004</div>
+      <span class="obj-icon">🛰️</span>
+      <div class="obj-title">GPS NAVIGATION</div>
+      <p class="obj-desc">Navigate using GPS coordinates for waypoint-to-waypoint missions, return-to-home, and precise geofencing capabilities.</p>
+    </div>
+  </div>
+</section>
+
+<!-- COMPONENTS -->
+<section id="components">
+  <div class="section-header">
+    <div class="section-tag">02 / Hardware</div>
+    <h2 class="section-title">MAIN <span>COMPONENTS</span></h2>
+  </div>
+  <div class="components-layout">
+    <div class="comp-list">
+      <div class="comp-item">
+        <div class="comp-icon-wrap">🧠</div>
+        <div class="comp-info">
+          <div class="comp-name">FLIGHT CONTROLLER</div>
+          <div class="comp-desc">The brain of the drone. Stabilizes flight, controls motors, maintains balance, and processes all sensor data in real-time.</div>
+          <div class="comp-examples">
+            <span class="comp-tag">PIXHAWK</span>
+            <span class="comp-tag">DJI NAZA-M</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-item">
+        <div class="comp-icon-wrap">📡</div>
+        <div class="comp-info">
+          <div class="comp-name">LIDAR SENSOR</div>
+          <div class="comp-desc">Uses laser beams to measure distances with high accuracy and long range up to 50m. Enables 360° obstacle mapping.</div>
+          <div class="comp-examples">
+            <span class="comp-tag">RPLIDAR A1</span>
+            <span class="comp-tag">TF-Luna</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-item">
+        <div class="comp-icon-wrap">🔊</div>
+        <div class="comp-info">
+          <div class="comp-name">ULTRASONIC SENSOR</div>
+          <div class="comp-desc">Low-cost, short-range distance measurement using sound waves. Ideal for proximity detection and landing assistance.</div>
+          <div class="comp-examples">
+            <span class="comp-tag">HC-SR04</span>
+            <span class="comp-tag">MB1240</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-item">
+        <div class="comp-icon-wrap">🛰️</div>
+        <div class="comp-info">
+          <div class="comp-name">GPS MODULE</div>
+          <div class="comp-desc">Provides precise latitude/longitude coordinates for waypoint navigation, geofencing, and return-to-home feature.</div>
+          <div class="comp-examples">
+            <span class="comp-tag">NEO-6M</span>
+            <span class="comp-tag">M8N</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-item">
+        <div class="comp-icon-wrap">⚙️</div>
+        <div class="comp-info">
+          <div class="comp-name">BRUSHLESS MOTORS + ESC</div>
+          <div class="comp-desc">High-efficiency brushless DC motors controlled by Electronic Speed Controllers for precise thrust management.</div>
+          <div class="comp-examples">
+            <span class="comp-tag">2212 920KV</span>
+            <span class="comp-tag">30A ESC</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-item">
+        <div class="comp-icon-wrap">🔋</div>
+        <div class="comp-info">
+          <div class="comp-name">LI-PO BATTERY</div>
+          <div class="comp-desc">Lightweight high-discharge lithium polymer battery providing power to all drone systems with BMS monitoring.</div>
+          <div class="comp-examples">
+            <span class="comp-tag">3S 5000mAh</span>
+            <span class="comp-tag">45C Discharge</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="drone-diagram">
+      <div class="drone-diagram-title">// SYSTEM ARCHITECTURE</div>
+      <svg viewBox="0 0 280 320" fill="none" width="100%">
+        <!-- Boxes -->
+        <!-- GPS -->
+        <rect x="100" y="10" width="80" height="36" rx="4" fill="#0b1525" stroke="#00b4ff" stroke-width="1.5"/>
+        <text x="140" y="24" text-anchor="middle" fill="#00b4ff" font-family="IBM Plex Mono" font-size="8" letter-spacing="1">GPS MODULE</text>
+        <text x="140" y="36" text-anchor="middle" fill="#3a6080" font-family="IBM Plex Mono" font-size="7">NEO-6M</text>
+
+        <!-- Arrow down -->
+        <line x1="140" y1="46" x2="140" y2="68" stroke="#00b4ff" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+        <polygon points="135,64 140,72 145,64" fill="#00b4ff" opacity="0.5"/>
+
+        <!-- Flight Controller -->
+        <rect x="70" y="72" width="140" height="50" rx="4" fill="#0b1525" stroke="#00b4ff" stroke-width="2"/>
+        <rect x="72" y="74" width="136" height="46" rx="3" fill="rgba(0,180,255,0.06)"/>
+        <text x="140" y="95" text-anchor="middle" fill="#fff" font-family="Syncopate" font-size="9" letter-spacing="1">FLIGHT CTRL</text>
+        <text x="140" y="110" text-anchor="middle" fill="#00b4ff" font-family="IBM Plex Mono" font-size="7" letter-spacing="1">PIXHAWK / NAZA</text>
+
+        <!-- LiDAR left -->
+        <rect x="10" y="80" width="52" height="36" rx="4" fill="#0b1525" stroke="#00ff9d" stroke-width="1.2"/>
+        <text x="36" y="96" text-anchor="middle" fill="#00ff9d" font-family="IBM Plex Mono" font-size="7">LIDAR</text>
+        <text x="36" y="108" text-anchor="middle" fill="#3a6080" font-family="IBM Plex Mono" font-size="6">RPLIDAR</text>
+        <line x1="62" y1="98" x2="70" y2="98" stroke="#00ff9d" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+        <!-- Ultrasonic right -->
+        <rect x="218" y="80" width="52" height="36" rx="4" fill="#0b1525" stroke="#ff6b00" stroke-width="1.2"/>
+        <text x="244" y="96" text-anchor="middle" fill="#ff6b00" font-family="IBM Plex Mono" font-size="7">ULTRASONIC</text>
+        <text x="244" y="108" text-anchor="middle" fill="#3a6080" font-family="IBM Plex Mono" font-size="6">HC-SR04</text>
+        <line x1="210" y1="98" x2="218" y2="98" stroke="#ff6b00" stroke-width="1.2" stroke-dasharray="3 3"/>
+
+        <!-- Arrow down -->
+        <line x1="140" y1="122" x2="140" y2="148" stroke="#00b4ff" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+        <polygon points="135,144 140,152 145,144" fill="#00b4ff" opacity="0.5"/>
+
+        <!-- Processing -->
+        <rect x="70" y="152" width="140" height="40" rx="4" fill="#0b1525" stroke="#00b4ff" stroke-width="1.5"/>
+        <text x="140" y="170" text-anchor="middle" fill="#fff" font-family="Syncopate" font-size="9" letter-spacing="1">PROCESSING</text>
+        <text x="140" y="183" text-anchor="middle" fill="#3a6080" font-family="IBM Plex Mono" font-size="7">PATH PLANNING + PID</text>
+
+        <!-- Arrow -->
+        <line x1="140" y1="192" x2="140" y2="214" stroke="#00b4ff" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+        <polygon points="135,210 140,218 145,210" fill="#00b4ff" opacity="0.5"/>
+
+        <!-- Motors -->
+        <rect x="70" y="218" width="140" height="40" rx="4" fill="#0b1525" stroke="#ff6b00" stroke-width="1.5"/>
+        <text x="140" y="236" text-anchor="middle" fill="#fff" font-family="Syncopate" font-size="9" letter-spacing="1">MOTOR DRIVER</text>
+        <text x="140" y="249" text-anchor="middle" fill="#3a6080" font-family="IBM Plex Mono" font-size="7">ESC × 4</text>
+
+        <!-- Arrow -->
+        <line x1="140" y1="258" x2="140" y2="278" stroke="#00b4ff" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+        <polygon points="135,274 140,282 145,274" fill="#00b4ff" opacity="0.5"/>
+
+        <!-- Propellers -->
+        <rect x="60" y="282" width="160" height="32" rx="4" fill="#0b1525" stroke="#00ff9d" stroke-width="1.5"/>
+        <text x="140" y="298" text-anchor="middle" fill="#00ff9d" font-family="Syncopate" font-size="9" letter-spacing="1">DRONE FLIGHT</text>
+        <text x="140" y="308" text-anchor="middle" fill="#3a6080" font-family="IBM Plex Mono" font-size="7">QUAD ROTORS</text>
+
+        <!-- WiFi cloud -->
+        <rect x="186" y="160" width="60" height="28" rx="12" fill="#0b1525" stroke="#3a6080" stroke-width="1"/>
+        <text x="216" y="178" text-anchor="middle" fill="#3a6080" font-family="IBM Plex Mono" font-size="7">WiFi / Web</text>
+        <line x1="210" y1="172" x2="210" y2="172" stroke="#3a6080" stroke-width="1"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="working">
+  <div class="section-header">
+    <div class="section-tag">03 / Principle</div>
+    <h2 class="section-title">HOW IT <span>WORKS</span></h2>
+  </div>
+  <div class="steps-timeline">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-body">
+        <div class="step-title">FLIGHT STABILIZATION</div>
+        <div class="step-desc">The flight controller continuously reads IMU data (gyroscope + accelerometer) and applies PID control to all four motors, maintaining stable, level flight automatically.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-body">
+        <div class="step-title">GPS POSITIONING</div>
+        <div class="step-desc">The GPS module transmits real-time latitude/longitude coordinates to the flight controller, enabling waypoint navigation, geofencing, and return-to-home functionality.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-body">
+        <div class="step-title">CONTINUOUS SENSOR SWEEP</div>
+        <div class="step-desc">LiDAR and ultrasonic sensors continuously scan the environment in all directions, measuring distances to surrounding objects and building a real-time obstacle map.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <div class="step-body">
+        <div class="step-title">OBSTACLE DETECTION TRIGGER</div>
+        <div class="step-desc">When an obstacle is detected within the configured threshold distance, the system immediately triggers the avoidance algorithm and alerts the ground station dashboard.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">05</div>
+      <div class="step-body">
+        <div class="step-title">PATH RE-PLANNING</div>
+        <div class="step-desc">The path planning algorithm calculates the optimal avoidance maneuver — speed reduction, directional change, or altitude shift — and executes the new trajectory smoothly.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">06</div>
+      <div class="step-body">
+        <div class="step-title">MISSION CONTINUATION</div>
+        <div class="step-desc">After successfully avoiding the obstacle, the drone resumes navigation toward its target destination, resuming its original flight plan or calculating a new optimal path.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ALGORITHMS -->
+<section id="algorithms">
+  <div class="section-header">
+    <div class="section-tag">04 / Intelligence</div>
+    <h2 class="section-title">CONTROL <span>ALGORITHMS</span></h2>
+  </div>
+  <div class="algo-grid">
+    <div class="algo-card">
+      <span class="algo-icon">📐</span>
+      <div class="algo-name">PID CONTROL</div>
+      <div class="algo-full">Proportional-Integral-Derivative</div>
+      <div class="algo-desc">Core stabilization algorithm that continuously corrects motor speeds to maintain desired attitude, altitude, and position.</div>
+    </div>
+    <div class="algo-card">
+      <span class="algo-icon">🔀</span>
+      <div class="algo-name">SENSOR FUSION</div>
+      <div class="algo-full">Kalman Filter Based</div>
+      <div class="algo-desc">Combines data from multiple sensors (IMU, GPS, LiDAR) into a single accurate state estimate using Kalman filtering.</div>
+    </div>
+    <div class="algo-card">
+      <span class="algo-icon">🗺️</span>
+      <div class="algo-name">PATH PLANNING</div>
+      <div class="algo-full">A* / RRT Algorithm</div>
+      <div class="algo-desc">Finds the shortest collision-free path from current position to goal, dynamically re-planning when obstacles are encountered.</div>
+    </div>
+    <div class="algo-card">
+      <span class="algo-icon">🌐</span>
+      <div class="algo-name">SLAM</div>
+      <div class="algo-full">Simultaneous Localization & Mapping</div>
+      <div class="algo-desc">Advanced algorithm that builds a map of an unknown environment while simultaneously tracking the drone's position within it.</div>
+    </div>
+  </div>
+</section>
+
+<!-- APPLICATIONS -->
+<section id="applications">
+  <div class="section-header">
+    <div class="section-tag">05 / Use Cases</div>
+    <h2 class="section-title">REAL-WORLD <span>APPLICATIONS</span></h2>
+  </div>
+  <div class="apps-grid">
+    <div class="app-card">
+      <div class="app-card-header" style="background: linear-gradient(135deg, #0a1525, #142035);">🔍</div>
+      <div class="app-card-body">
+        <div class="app-title">SURVEILLANCE & SECURITY</div>
+        <p class="app-desc">Autonomous perimeter monitoring, real-time threat detection, and aerial security patrols without human pilots.</p>
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-card-header" style="background: linear-gradient(135deg, #0a1520, #101d30);">🗺️</div>
+      <div class="app-card-body">
+        <div class="app-title">AERIAL MAPPING & SURVEY</div>
+        <p class="app-desc">High-precision terrain mapping, 3D model generation, and infrastructure inspection via autonomous flight routes.</p>
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-card-header" style="background: linear-gradient(135deg, #1a0a0a, #2d1010);">🚨</div>
+      <div class="app-card-body">
+        <div class="app-title">DISASTER MANAGEMENT</div>
+        <p class="app-desc">Search & rescue operations in dangerous zones, delivery of emergency supplies, and real-time disaster assessment.</p>
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-card-header" style="background: linear-gradient(135deg, #0a1a0a, #102510);">🌾</div>
+      <div class="app-card-body">
+        <div class="app-title">AGRICULTURAL MONITORING</div>
+        <p class="app-desc">Crop health assessment, precision spraying, irrigation monitoring, and yield estimation across large fields.</p>
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-card-header" style="background: linear-gradient(135deg, #0a0a1a, #100d25);">🎯</div>
+      <div class="app-card-body">
+        <div class="app-title">MILITARY RECONNAISSANCE</div>
+        <p class="app-desc">Intelligence gathering, forward area reconnaissance, and safe exploration of hostile territory without risking personnel.</p>
+      </div>
+    </div>
+    <div class="app-card">
+      <div class="app-card-header" style="background: linear-gradient(135deg, #1a100a, #2a1a08);">📦</div>
+      <div class="app-card-body">
+        <div class="app-title">LOGISTICS & DELIVERY</div>
+        <p class="app-desc">Last-mile package delivery, medical supply delivery to remote areas, and warehouse inventory management.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ADVANTAGES & CHALLENGES -->
+<section id="analysis" style="background: var(--surface);">
+  <div class="section-header">
+    <div class="section-tag">06 / Analysis</div>
+    <h2 class="section-title">ADVANTAGES & <span>CHALLENGES</span></h2>
+  </div>
+  <div class="two-col">
+    <div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:3px; color:var(--accent3); margin-bottom:20px;">✓ ADVANTAGES</div>
+      <div class="adv-list">
+        <div class="adv-item">
+          <div class="adv-bullet">✓</div>
+          <div>
+            <div class="adv-title">REDUCES HUMAN EFFORT</div>
+            <div class="adv-text">Fully autonomous operation eliminates the need for skilled pilots, reducing operational costs and enabling 24/7 deployment.</div>
+          </div>
+        </div>
+        <div class="adv-item">
+          <div class="adv-bullet">✓</div>
+          <div>
+            <div class="adv-title">CRASH PREVENTION</div>
+            <div class="adv-text">Real-time obstacle detection and avoidance dramatically reduces collision risk and protects valuable hardware investments.</div>
+          </div>
+        </div>
+        <div class="adv-item">
+          <div class="adv-bullet">✓</div>
+          <div>
+            <div class="adv-title">INCREASED SAFETY</div>
+            <div class="adv-text">Operates in dangerous environments without risking human lives — ideal for hazardous area inspection and disaster zones.</div>
+          </div>
+        </div>
+        <div class="adv-item">
+          <div class="adv-bullet">✓</div>
+          <div>
+            <div class="adv-title">SCALABLE MISSIONS</div>
+            <div class="adv-text">Waypoint-based navigation allows complex multi-stop mission planning that can be uploaded and repeated automatically.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:3px; color:var(--accent2); margin-bottom:20px;">⚠ CHALLENGES</div>
+      <div class="chal-list">
+        <div class="chal-item">
+          <div class="chal-bullet">⚠</div>
+          <div>
+            <div class="chal-title">SENSOR ACCURACY IN BAD WEATHER</div>
+            <div class="chal-text">Rain, fog, and wind significantly degrade LiDAR and ultrasonic sensor performance, limiting operational conditions.</div>
+          </div>
+        </div>
+        <div class="chal-item">
+          <div class="chal-bullet">⚠</div>
+          <div>
+            <div class="chal-title">POWER CONSUMPTION</div>
+            <div class="chal-text">Running multiple sensors and real-time processing draws significant power, limiting flight time to 20-40 minutes per charge.</div>
+          </div>
+        </div>
+        <div class="chal-item">
+          <div class="chal-bullet">⚠</div>
+          <div>
+            <div class="chal-title">REAL-TIME PROCESSING LOAD</div>
+            <div class="chal-text">Sensor fusion, path planning, and motor control must all execute within milliseconds, demanding powerful onboard computing.</div>
+          </div>
+        </div>
+        <div class="chal-item">
+          <div class="chal-bullet">⚠</div>
+          <div>
+            <div class="chal-title">WEIGHT MANAGEMENT</div>
+            <div class="chal-text">Every added sensor and processor adds weight, reducing flight time and payload capacity — requiring careful hardware selection.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE DASHBOARD PREVIEW -->
+<section id="dashboard">
+  <div class="section-header">
+    <div class="section-tag">07 / Interface</div>
+    <h2 class="section-title">LIVE CONTROL <span>DASHBOARD</span></h2>
+  </div>
+
+  <div class="dashboard-grid">
+    <!-- Left panel - Controls -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="dash-panel">
+        <div class="dash-title">// Flight Status</div>
+        <div class="metric-row"><span class="metric-name">MODE</span><span class="metric-val green" id="d-mode">AUTONOMOUS</span></div>
+        <div class="metric-row"><span class="metric-name">ALTITUDE</span><span class="metric-val" id="d-alt">24.6 m</span></div>
+        <div class="metric-row"><span class="metric-name">AIRSPEED</span><span class="metric-val" id="d-spd">8.2 m/s</span></div>
+        <div class="metric-row"><span class="metric-name">HEADING</span><span class="metric-val" id="d-hdg">274°</span></div>
+        <div class="metric-row"><span class="metric-name">BATTERY</span><span class="metric-val green" id="d-bat">78%</span></div>
+        <div class="metric-row"><span class="metric-name">GPS FIX</span><span class="metric-val green">LOCK (12sat)</span></div>
+        <div class="metric-row"><span class="metric-name">OBSTACLE</span><span class="metric-val orange" id="d-obs">CLEAR</span></div>
+        <div class="metric-row"><span class="metric-name">LINK</span><span class="metric-val green">STRONG 94%</span></div>
+      </div>
+
+      <div class="dash-panel">
+        <div class="dash-title">// Mission Map</div>
+        <div class="mini-map">
+          <canvas id="mapCanvas" width="260" height="180"></canvas>
+        </div>
+      </div>
+
+      <div class="dash-panel">
+        <div class="dash-title">// Controls</div>
+        <div class="ctrl-btns">
+          <div class="ctrl-btn active" onclick="setMode(this,'AUTONOMOUS')">AUTO</div>
+          <div class="ctrl-btn" onclick="setMode(this,'MANUAL')">MANUAL</div>
+          <div class="ctrl-btn" onclick="setMode(this,'HOVER')">HOVER</div>
+          <div class="ctrl-btn" onclick="setMode(this,'RTH')">RETURN HOME</div>
+          <div class="ctrl-btn danger" onclick="handleEStop(this)">⚠ EMERGENCY STOP</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center - Camera feed -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="dash-panel">
+        <div class="dash-title">// Live Camera Feed — Front View</div>
+        <div class="cam-feed">
+          <canvas id="droneCanvas"></canvas>
+          <div class="feed-corners">
+            <div class="fc tl"></div><div class="fc tr"></div>
+            <div class="fc bl"></div><div class="fc br"></div>
+          </div>
+        </div>
+        <div class="cam-stats">
+          <div class="cam-stat">
+            <span class="cam-stat-val" id="c-alt">24.6</span>
+            <span class="cam-stat-lbl">ALT (m)</span>
+          </div>
+          <div class="cam-stat">
+            <span class="cam-stat-val" id="c-spd">8.2</span>
+            <span class="cam-stat-lbl">SPEED m/s</span>
+          </div>
+          <div class="cam-stat">
+            <span class="cam-stat-val" id="c-fps">30</span>
+            <span class="cam-stat-lbl">CAM FPS</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sensor bars -->
+      <div class="dash-panel">
+        <div class="dash-title">// Sensor Array</div>
+        <div class="sensor-bars">
+          <div class="sb-item">
+            <div class="sb-head"><span>LIDAR FRONT</span><span id="sb-lf">8.4 m</span></div>
+            <div class="sb-track"><div class="sb-fill" id="sbf-lf" style="width:84%"></div></div>
+          </div>
+          <div class="sb-item">
+            <div class="sb-head"><span>LIDAR LEFT</span><span id="sb-ll">3.1 m</span></div>
+            <div class="sb-track"><div class="sb-fill" id="sbf-ll" style="width:31%"></div></div>
+          </div>
+          <div class="sb-item">
+            <div class="sb-head"><span>LIDAR RIGHT</span><span id="sb-lr">12.0 m</span></div>
+            <div class="sb-track"><div class="sb-fill" id="sbf-lr" style="width:100%"></div></div>
+          </div>
+          <div class="sb-item">
+            <div class="sb-head"><span>ULTRASONIC DOWN</span><span id="sb-ud">24.6 m</span></div>
+            <div class="sb-track"><div class="sb-fill" id="sbf-ud" style="width:50%"></div></div>
+          </div>
+          <div class="sb-item">
+            <div class="sb-head"><span>CPU LOAD</span><span id="sb-cpu">62%</span></div>
+            <div class="sb-track"><div class="sb-fill" id="sbf-cpu" style="width:62%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right panel - GPS & logs -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="dash-panel">
+        <div class="dash-title">// GPS Telemetry</div>
+        <div class="metric-row"><span class="metric-name">LAT</span><span class="metric-val" id="d-lat">13.0827°N</span></div>
+        <div class="metric-row"><span class="metric-name">LON</span><span class="metric-val" id="d-lon">80.2707°E</span></div>
+        <div class="metric-row"><span class="metric-name">SATS</span><span class="metric-val green">12</span></div>
+        <div class="metric-row"><span class="metric-name">HDOP</span><span class="metric-val green">0.8</span></div>
+        <div class="metric-row"><span class="metric-name">HOME DIST</span><span class="metric-val" id="d-hd">284 m</span></div>
+      </div>
+
+      <div class="dash-panel">
+        <div class="dash-title">// Speed Control</div>
+        <div style="padding:8px 0;">
+          <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:10px;">
+            <span>THROTTLE</span><span id="thr-val" style="color:var(--accent)">65%</span>
+          </div>
+          <input type="range" min="0" max="100" value="65" style="width:100%;-webkit-appearance:none;height:4px;background:rgba(0,180,255,0.15);border-radius:2px;outline:none;border:1px solid var(--border);"
+            oninput="document.getElementById('thr-val').textContent=this.value+'%'">
+          <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:16px;margin-bottom:10px;">
+            <span>ALTITUDE</span><span id="alt-val" style="color:var(--accent)">25 m</span>
+          </div>
+          <input type="range" min="5" max="120" value="25" style="width:100%;-webkit-appearance:none;height:4px;background:rgba(0,180,255,0.15);border-radius:2px;outline:none;border:1px solid var(--border);"
+            oninput="document.getElementById('alt-val').textContent=this.value+' m'">
+          <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:16px;margin-bottom:10px;">
+            <span>AVOID RADIUS</span><span id="av-val" style="color:var(--accent)">3.0 m</span>
+          </div>
+          <input type="range" min="10" max="100" value="30" style="width:100%;-webkit-appearance:none;height:4px;background:rgba(0,180,255,0.15);border-radius:2px;outline:none;border:1px solid var(--border);"
+            oninput="document.getElementById('av-val').textContent=(this.value/10).toFixed(1)+' m'">
+        </div>
+      </div>
+
+      <div class="dash-panel" style="flex:1;">
+        <div class="dash-title">// System Log</div>
+        <div id="sys-log" style="height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section id="tech">
+  <div class="section-header">
+    <div class="section-tag">08 / Stack</div>
+    <h2 class="section-title">TECHNOLOGIES <span>USED</span></h2>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-bottom:40px;">
+    <div class="dash-panel">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--accent);margin-bottom:16px;">FRONTEND</div>
+      <div class="tech-grid" style="margin-top:0;grid-template-columns:1fr 1fr;">
+        <div class="tech-item"><span class="tech-icon">🌐</span><div class="tech-name">HTML5</div></div>
+        <div class="tech-item"><span class="tech-icon">🎨</span><div class="tech-name">CSS3</div></div>
+        <div class="tech-item"><span class="tech-icon">⚡</span><div class="tech-name">JavaScript</div></div>
+        <div class="tech-item"><span class="tech-icon">📱</span><div class="tech-name">Bootstrap</div></div>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--accent2);margin-bottom:16px;">BACKEND</div>
+      <div class="tech-grid" style="margin-top:0;grid-template-columns:1fr 1fr;">
+        <div class="tech-item"><span class="tech-icon">🐍</span><div class="tech-name">Python Flask</div></div>
+        <div class="tech-item"><span class="tech-icon">📡</span><div class="tech-name">WebSocket</div></div>
+        <div class="tech-item"><span class="tech-icon">🔗</span><div class="tech-name">MQTT</div></div>
+        <div class="tech-item"><span class="tech-icon">🍓</span><div class="tech-name">Raspberry Pi</div></div>
+      </div>
+    </div>
+    <div class="dash-panel">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--accent3);margin-bottom:16px;">AI / EMBEDDED</div>
+      <div class="tech-grid" style="margin-top:0;grid-template-columns:1fr 1fr;">
+        <div class="tech-item"><span class="tech-icon">👁️</span><div class="tech-name">OpenCV</div></div>
+        <div class="tech-item"><span class="tech-icon">🧮</span><div class="tech-name">Pixhawk</div></div>
+        <div class="tech-item"><span class="tech-icon">🗺️</span><div class="tech-name">MAVLink</div></div>
+        <div class="tech-item"><span class="tech-icon">🤖</span><div class="tech-name">ArduPilot</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section id="team" style="background:var(--surface);">
+  <div class="section-header">
+    <div class="section-tag">09 / Team</div>
+    <h2 class="section-title">PROJECT <span>TEAM</span></h2>
+  </div>
+  <div class="team-grid">
+    <div class="team-card">
+      <div class="team-avatar">👨‍💻</div>
+      <div class="team-name">ARJUN K.</div>
+      <div class="team-role">FLIGHT SYSTEMS</div>
+    </div>
+    <div class="team-card">
+      <div class="team-avatar">👩‍🔬</div>
+      <div class="team-name">PRIYA R.</div>
+      <div class="team-role">AI & SENSORS</div>
+    </div>
+    <div class="team-card">
+      <div class="team-avatar">👨‍🎨</div>
+      <div class="team-name">MOHAN S.</div>
+      <div class="team-role">WEB INTERFACE</div>
+    </div>
+    <div class="team-card">
+      <div class="team-avatar">👩‍💼</div>
+      <div class="team-name">DIVYA M.</div>
+      <div class="team-role">PROJECT LEAD</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-top">
+    <div class="footer-brand">
+      <span class="logo-text">AEROBRAIN</span>
+      <p>An autonomous drone platform combining advanced robotics, embedded systems, GPS navigation, and AI-powered obstacle avoidance.</p>
+    </div>
+    <div>
+      <div class="footer-links-title">NAVIGATION</div>
+      <ul class="footer-links">
+        <li><a href="#home">Home</a></li>
+        <li><a href="#objective">Objectives</a></li>
+        <li><a href="#components">Components</a></li>
+        <li><a href="#working">How It Works</a></li>
+        <li><a href="#applications">Applications</a></li>
+        <li><a href="#dashboard">Dashboard</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-links-title">PROJECT INFO</div>
+      <ul class="footer-links">
+        <li><a href="#">Final Year Project — 2024</a></li>
+        <li><a href="#">B.Tech Electronics Dept.</a></li>
+        <li><a href="#">Robotics & Automation</a></li>
+        <li><a href="#">Project Report</a></li>
+        <li><a href="#">Block Diagram</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2024 AEROBRAIN PROJECT // AUTONOMOUS DRONE SYSTEM</span>
+    <span>FINAL YEAR ENGINEERING PROJECT</span>
+  </div>
+</footer>
+
+<script>
+// ===== CLOCK in nav =====
+function updateTime() {
+  const now = new Date();
+  // could add a clock display if needed
+}
+
+// ===== DRONE CAMERA CANVAS =====
+const dc = document.getElementById('droneCanvas');
+const dCtx = dc.getContext('2d');
+
+function resizeDrone() {
+  const p = dc.parentElement;
+  dc.width = p.clientWidth;
+  dc.height = p.clientHeight;
+}
+resizeDrone();
+window.addEventListener('resize', resizeDrone);
+
+let dTime = 0;
+let obstacleX = -1, obstacleY = -1, obstacleVisible = false, obstacleTimer = 0;
+
+function drawDrone() {
+  const W = dc.width, H = dc.height;
+  dCtx.clearRect(0, 0, W, H);
+
+  // Sky gradient
+  const sky = dCtx.createLinearGradient(0, 0, 0, H * 0.6);
+  sky.addColorStop(0, '#020a14');
+  sky.addColorStop(1, '#051525');
+  dCtx.fillStyle = sky;
+  dCtx.fillRect(0, 0, W, H);
+
+  // Horizon / terrain
+  const ground = dCtx.createLinearGradient(0, H * 0.6, 0, H);
+  ground.addColorStop(0, '#0a1f0a');
+  ground.addColorStop(1, '#040e04');
+  dCtx.fillStyle = ground;
+  dCtx.fillRect(0, H * 0.6, W, H);
+
+  // Grid overlay (HUD)
+  dCtx.strokeStyle = 'rgba(0,180,255,0.06)';
+  dCtx.lineWidth = 1;
+  for (let x = 0; x < W; x += 50) { dCtx.beginPath(); dCtx.moveTo(x, 0); dCtx.lineTo(x, H); dCtx.stroke(); }
+  for (let y = 0; y < H; y += 50) { dCtx.beginPath(); dCtx.moveTo(0, y); dCtx.lineTo(W, y); dCtx.stroke(); }
+
+  // Horizon line
+  const hy = H * 0.6 + Math.sin(dTime * 0.5) * 10;
+  dCtx.strokeStyle = 'rgba(0,180,255,0.2)';
+  dCtx.lineWidth = 1;
+  dCtx.beginPath(); dCtx.moveTo(0, hy); dCtx.lineTo(W, hy); dCtx.stroke();
+
+  // Trees silhouette
+  for (let i = 0; i < 12; i++) {
+    const tx = (i / 12) * W + Math.sin(i) * 20;
+    const th = 20 + Math.sin(i * 1.3) * 15;
+    dCtx.fillStyle = '#051205';
+    dCtx.beginPath();
+    dCtx.moveTo(tx, hy);
+    dCtx.lineTo(tx - 15, hy + th);
+    dCtx.lineTo(tx + 15, hy + th);
+    dCtx.closePath();
+    dCtx.fill();
+  }
+
+  // Crosshair
+  const cx = W / 2, cy = H / 2;
+  dCtx.strokeStyle = 'rgba(0,180,255,0.5)';
+  dCtx.lineWidth = 1;
+  dCtx.beginPath();
+  dCtx.moveTo(cx - 30, cy); dCtx.lineTo(cx - 8, cy);
+  dCtx.moveTo(cx + 8, cy); dCtx.lineTo(cx + 30, cy);
+  dCtx.moveTo(cx, cy - 30); dCtx.lineTo(cx, cy - 8);
+  dCtx.moveTo(cx, cy + 8); dCtx.lineTo(cx, cy + 30);
+  dCtx.stroke();
+
+  // Center circle
+  dCtx.beginPath(); dCtx.arc(cx, cy, 5, 0, Math.PI * 2);
+  dCtx.strokeStyle = 'rgba(0,180,255,0.4)';
+  dCtx.stroke();
+
+  // Obstacle detection
+  obstacleTimer--;
+  if (obstacleTimer < 0 && Math.random() < 0.008) {
+    obstacleX = 150 + Math.random() * (W - 300);
+    obstacleY = 60 + Math.random() * (H * 0.5);
+    obstacleVisible = true;
+    obstacleTimer = 120;
+    document.getElementById('d-obs').textContent = 'WARNING!';
+    document.getElementById('d-obs').style.color = 'var(--danger)';
+  }
+  if (obstacleTimer === 0) {
+    obstacleVisible = false;
+    document.getElementById('d-obs').textContent = 'CLEAR';
+    document.getElementById('d-obs').style.color = 'var(--accent2)';
+  }
+
+  if (obstacleVisible) {
+    const ow = 80, oh = 60;
+    dCtx.strokeStyle = '#ff3c5a';
+    dCtx.lineWidth = 2;
+    dCtx.setLineDash([6, 4]);
+    dCtx.strokeRect(obstacleX - ow/2, obstacleY - oh/2, ow, oh);
+    dCtx.setLineDash([]);
+    dCtx.fillStyle = 'rgba(255,60,90,0.08)';
+    dCtx.fillRect(obstacleX - ow/2, obstacleY - oh/2, ow, oh);
+    dCtx.fillStyle = '#ff3c5a';
+    dCtx.font = '10px "IBM Plex Mono"';
+    dCtx.fillText('OBSTACLE', obstacleX - ow/2, obstacleY - oh/2 - 6);
+
+    // Pulse
+    const pulse = Math.sin(dTime * 5) * 0.5 + 0.5;
+    dCtx.strokeStyle = `rgba(255,60,90,${pulse * 0.5})`;
+    dCtx.beginPath();
+    dCtx.arc(obstacleX, obstacleY, 40 + pulse * 15, 0, Math.PI * 2);
+    dCtx.stroke();
+  }
+
+  // HUD elements
+  dCtx.fillStyle = 'rgba(0,180,255,0.7)';
+  dCtx.font = '9px "IBM Plex Mono"';
+  dCtx.fillText('ALT: ' + (24 + Math.sin(dTime * 0.3) * 0.5).toFixed(1) + 'm', 14, 24);
+  dCtx.fillText('SPD: ' + (8.2 + Math.sin(dTime * 0.7) * 0.3).toFixed(1) + 'm/s', 14, 38);
+  dCtx.fillText('HDG: 274°', 14, 52);
+
+  const batPct = Math.max(60, 78 - dTime * 0.01);
+  dCtx.fillText('BAT: ' + Math.round(batPct) + '%', W - 80, 24);
+  dCtx.fillText('GPS: LOCK', W - 80, 38);
+  dCtx.fillText('30 FPS', W - 60, H - 12);
+
+  // Artificial horizon
+  const ahX = W - 70, ahY = H - 70, ahR = 40;
+  dCtx.save();
+  dCtx.beginPath();
+  dCtx.arc(ahX, ahY, ahR, 0, Math.PI * 2);
+  dCtx.clip();
+  dCtx.fillStyle = '#020810';
+  dCtx.fillRect(ahX - ahR, ahY - ahR, ahR * 2, ahR * 2);
+  const roll = Math.sin(dTime * 0.4) * 5;
+  dCtx.save();
+  dCtx.translate(ahX, ahY);
+  dCtx.rotate(roll * Math.PI / 180);
+  dCtx.fillStyle = '#0a3020';
+  dCtx.fillRect(-ahR, 0, ahR * 2, ahR);
+  dCtx.fillStyle = '#051218';
+  dCtx.fillRect(-ahR, -ahR, ahR * 2, ahR);
+  dCtx.strokeStyle = 'rgba(255,255,255,0.3)';
+  dCtx.lineWidth = 1;
+  dCtx.beginPath(); dCtx.moveTo(-ahR, 0); dCtx.lineTo(ahR, 0); dCtx.stroke();
+  dCtx.restore();
+  dCtx.restore();
+  dCtx.strokeStyle = 'rgba(0,180,255,0.5)';
+  dCtx.lineWidth = 1;
+  dCtx.beginPath(); dCtx.arc(ahX, ahY, ahR, 0, Math.PI * 2); dCtx.stroke();
+
+  // Noise
+  for (let i = 0; i < 200; i++) {
+    const nx = Math.random() * W, ny = Math.random() * H;
+    dCtx.fillStyle = `rgba(200,230,255,${Math.random() * 0.03})`;
+    dCtx.fillRect(nx, ny, 1, 1);
+  }
+
+  dTime += 0.02;
+  requestAnimationFrame(drawDrone);
+}
+drawDrone();
+
+// ===== MAP CANVAS =====
+const mc = document.getElementById('mapCanvas');
+const mCtx = mc.getContext('2d');
+mc.width = mc.parentElement.clientWidth - 2;
+mc.height = 180;
+let droneMapX = 130, droneMapY = 90, droneMapAngle = 0;
+let waypoints = [
+  {x:50, y:50}, {x:200, y:60}, {x:220, y:130}, {x:100, y:150}, {x:50, y:100}
+];
+let currentWP = 0;
+
+function drawMap() {
+  const W = mc.width, H = mc.height;
+  mCtx.fillStyle = '#000';
+  mCtx.fillRect(0, 0, W, H);
+
+  // Grid
+  mCtx.strokeStyle = 'rgba(0,180,255,0.06)';
+  mCtx.lineWidth = 1;
+  for (let x = 0; x < W; x += 30) { mCtx.beginPath(); mCtx.moveTo(x,0); mCtx.lineTo(x,H); mCtx.stroke(); }
+  for (let y = 0; y < H; y += 30) { mCtx.beginPath(); mCtx.moveTo(0,y); mCtx.lineTo(W,y); mCtx.stroke(); }
+
+  // Waypoint path
+  mCtx.strokeStyle = 'rgba(0,180,255,0.3)';
+  mCtx.lineWidth = 1;
+  mCtx.setLineDash([4, 6]);
+  mCtx.beginPath();
+  waypoints.forEach((wp, i) => { i === 0 ? mCtx.moveTo(wp.x, wp.y) : mCtx.lineTo(wp.x, wp.y); });
+  mCtx.closePath();
+  mCtx.stroke();
+  mCtx.setLineDash([]);
+
+  // Waypoints
+  waypoints.forEach((wp, i) => {
+    mCtx.beginPath();
+    mCtx.arc(wp.x, wp.y, 5, 0, Math.PI * 2);
+    mCtx.fillStyle = i === currentWP ? '#00ff9d' : 'rgba(0,180,255,0.4)';
+    mCtx.fill();
+    mCtx.fillStyle = 'rgba(0,180,255,0.6)';
+    mCtx.font = '8px IBM Plex Mono';
+    mCtx.fillText('WP' + (i+1), wp.x + 6, wp.y - 4);
+  });
+
+  // Drone trail
+  mCtx.strokeStyle = 'rgba(0,255,157,0.2)';
+  mCtx.lineWidth = 1;
+
+  // Move drone
+  const target = waypoints[currentWP];
+  const dx = target.x - droneMapX, dy = target.y - droneMapY;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist < 5) { currentWP = (currentWP + 1) % waypoints.length; }
+  else {
+    droneMapX += (dx / dist) * 0.8;
+    droneMapY += (dy / dist) * 0.8;
+    droneMapAngle = Math.atan2(dy, dx);
+  }
+
+  // Drone icon
+  mCtx.save();
+  mCtx.translate(droneMapX, droneMapY);
+  mCtx.rotate(droneMapAngle + Math.PI / 2);
+  mCtx.fillStyle = '#00b4ff';
+  mCtx.beginPath();
+  mCtx.moveTo(0, -8); mCtx.lineTo(-5, 6); mCtx.lineTo(0, 3); mCtx.lineTo(5, 6);
+  mCtx.closePath();
+  mCtx.fill();
+  mCtx.restore();
+
+  // Drone glow
+  const g = mCtx.createRadialGradient(droneMapX, droneMapY, 0, droneMapX, droneMapY, 20);
+  g.addColorStop(0, 'rgba(0,180,255,0.2)');
+  g.addColorStop(1, 'transparent');
+  mCtx.fillStyle = g;
+  mCtx.beginPath(); mCtx.arc(droneMapX, droneMapY, 20, 0, Math.PI*2); mCtx.fill();
+
+  // Home marker
+  mCtx.fillStyle = '#ff6b00';
+  mCtx.font = '14px serif';
+  mCtx.fillText('⌂', 6, H - 10);
+  mCtx.fillStyle = 'rgba(0,180,255,0.4)';
+  mCtx.font = '8px IBM Plex Mono';
+  mCtx.fillText('HOME', 20, H - 10);
+
+  requestAnimationFrame(drawMap);
+}
+drawMap();
+
+// ===== LIVE DATA SIMULATION =====
+setInterval(() => {
+  const alt = (24 + Math.random() * 2 - 1).toFixed(1);
+  const spd = (8 + Math.random() * 1.5).toFixed(1);
+  const hdg = Math.round(270 + Math.random() * 10 - 5);
+  const bat = Math.max(60, 78 - Math.random() * 0.2);
+  const hd = Math.round(280 + Math.random() * 10 - 5);
+
+  document.getElementById('d-alt').textContent = alt + ' m';
+  document.getElementById('d-spd').textContent = spd + ' m/s';
+  document.getElementById('d-hdg').textContent = hdg + '°';
+  document.getElementById('d-bat').textContent = Math.round(bat) + '%';
+  document.getElementById('d-hd').textContent = hd + ' m';
+  document.getElementById('c-alt').textContent = alt;
+  document.getElementById('c-spd').textContent = spd;
+
+  // Sensor bars
+  const lf = (5 + Math.random() * 8).toFixed(1);
+  const ll = (2 + Math.random() * 5).toFixed(1);
+  const lr = (8 + Math.random() * 6).toFixed(1);
+  const ud = parseFloat(alt);
+  const cpu = Math.round(55 + Math.random() * 15);
+
+  document.getElementById('sb-lf').textContent = lf + ' m';
+  document.getElementById('sb-ll').textContent = ll + ' m';
+  document.getElementById('sb-lr').textContent = lr + ' m';
+  document.getElementById('sb-ud').textContent = ud + ' m';
+  document.getElementById('sb-cpu').textContent = cpu + '%';
+
+  document.getElementById('sbf-lf').style.width = Math.min(parseFloat(lf) / 15 * 100, 100) + '%';
+  document.getElementById('sbf-ll').style.width = Math.min(parseFloat(ll) / 10 * 100, 100) + '%';
+  document.getElementById('sbf-lr').style.width = Math.min(parseFloat(lr) / 15 * 100, 100) + '%';
+  document.getElementById('sbf-ud').style.width = Math.min(ud / 50 * 100, 100) + '%';
+  document.getElementById('sbf-cpu').style.width = cpu + '%';
+}, 1500);
+
+// ===== SYSTEM LOG =====
+const logMsgs = [
+  ['info', 'GPS lock maintained — 12 satellites'],
+  ['ok', 'Waypoint WP2 reached'],
+  ['info', 'LiDAR sweep: all clear'],
+  ['ok', 'PID tuning optimal'],
+  ['warn', 'Obstacle detected at 3.2m — rerouting'],
+  ['ok', 'Obstacle avoided successfully'],
+  ['info', 'Battery: 78% — estimated 14min flight'],
+  ['info', 'Heading adjusted to 274°'],
+  ['ok', 'Autopilot engaged'],
+  ['warn', 'CPU load: 72%'],
+  ['info', 'Altitude: 24.6m — within limits'],
+];
+
+const logEl = document.getElementById('sys-log');
+const typeColors = { info: 'var(--muted)', ok: 'var(--accent3)', warn: 'var(--accent2)', err: 'var(--danger)' };
+const typeIcons = { info: '●', ok: '✓', warn: '⚠', err: '✗' };
+
+function addLog() {
+  const msg = logMsgs[Math.floor(Math.random() * logMsgs.length)];
+  const now = new Date();
+  const t = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:${typeColors[msg[0]]};padding:3px 4px;border-left:2px solid ${typeColors[msg[0]]};animation:logIn 0.3s ease;`;
+  div.innerHTML = `<span style="opacity:0.4;flex-shrink:0">${t}</span><span>${typeIcons[msg[0]]} ${msg[1]}</span>`;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+  if (logEl.children.length > 40) logEl.removeChild(logEl.firstChild);
+}
+
+// Initial logs
+['ok','System boot complete','ok','Sensors calibrated','ok','GPS lock acquired','info','Mission loaded — 5 waypoints'].forEach((m, i) => {
+  if (i % 2 === 0) return;
+  const arr = [i === 0 ? 'ok' : i === 2 ? 'ok' : 'info'];
+});
+
+// Add seed logs
+[['ok','System boot complete'],['ok','Sensors calibrated'],['ok','GPS lock acquired'],['info','Mission loaded — 5 waypoints'],['ok','Autonomous mode engaged']].forEach(m => {
+  const now = new Date();
+  const t = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:${typeColors[m[0]]};padding:3px 4px;border-left:2px solid ${typeColors[m[0]]};`;
+  div.innerHTML = `<span style="opacity:0.4;flex-shrink:0">${t}</span><span>${typeIcons[m[0]]} ${m[1]}</span>`;
+  logEl.appendChild(div);
+});
+
+setInterval(addLog, 3000);
+
+// ===== MODE BUTTONS =====
+function setMode(btn, mode) {
+  document.querySelectorAll('.ctrl-btn:not(.danger)').forEach(b => b.classList.remove('active'));
+  if (!btn.classList.contains('danger')) {
+    btn.classList.add('active');
+    document.getElementById('d-mode').textContent = mode;
+  }
+}
+
+// ===== EMERGENCY STOP =====
+function handleEStop(btn) {
+  btn.textContent = '■ STOPPED';
+  btn.style.background = 'rgba(255,60,90,0.3)';
+  document.getElementById('d-mode').textContent = 'STOPPED';
+  document.getElementById('d-mode').style.color = 'var(--danger)';
+  addLog();
+  const div = document.createElement('div');
+  div.style.cssText = `display:flex;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--danger);padding:3px 4px;border-left:2px solid var(--danger);`;
+  div.innerHTML = '<span style="opacity:0.4">NOW </span><span>✗ EMERGENCY STOP ACTIVATED</span>';
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+  setTimeout(() => {
+    btn.textContent = '⚠ EMERGENCY STOP';
+    btn.style.background = '';
+    document.getElementById('d-mode').textContent = 'AUTONOMOUS';
+    document.getElementById('d-mode').style.color = '';
+  }, 4000);
+}
+
+// ===== SCROLL ANIMATIONS =====
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.style.animationPlayState = 'running'; });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.obj-card, .comp-item, .step, .algo-card, .app-card, .adv-item, .chal-item, .team-card').forEach((el, i) => {
+  el.style.animationDelay = (i * 0.08) + 's';
+  el.style.animationPlayState = 'paused';
+  el.style.animation = `fadeUp 0.5s ease both`;
+  el.style.animationPlayState = 'paused';
+  observer.observe(el);
+});
+</script>
+</body>
+</html>
